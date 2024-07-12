@@ -1,12 +1,13 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
+from pyspark.sql.functions import col, count, min
 
 # Create a Spark session
 spark = SparkSession.builder.appName("Assignment 1").getOrCreate()
 
 # Task 1
-# Part of the code for chaning the time and date works, but saving the changes does not.
+# Part of the code for changing the time and date works, but saving the changes does not.
 '''
 file_name = "dataset.txt"
 df = spark.read.option("header", "true").csv(file_name)
@@ -33,6 +34,7 @@ df = df.withColumn(
 
 df.coalesce(1).write.mode("overwrite").csv(file_name, header=True, sep=",")
 '''
+
 # Task 2
 file_path = "dataset.txt"
 data_df = spark.read.csv(file_path, header=True, inferSchema=True)
@@ -43,6 +45,9 @@ filtered_df = cumulative_count_df.filter("cumulative_count >= 5")
 result_df = filtered_df.groupBy("UserID").agg(F.countDistinct("Date").alias("num_days"))
 result_df = result_df.orderBy(F.desc("num_days"), "UserID").limit(5)
 
+# Show the result for Task 2
+result_df.show()
+
 # Task 3
 file_path = 'dataset.txt'
 df = spark.read.csv(file_path, header=True)
@@ -51,12 +56,18 @@ result_df = df.groupBy("UserID", col("Date").alias("Week")).agg(count("*").alias
 result_df = result_df.filter(result_df.DataPoints > 100)
 final_result_df = result_df.groupBy("UserID").agg(count("*").alias("WeeksWithMoreThan100DataPoints"))
 
+# Show the result for Task 3
+final_result_df.show()
+
 # Task 4
 file_path = "dataset.txt"
 df = spark.read.csv(file_path, header=True, inferSchema=True)
-df = df.withColumn("Latitude", df["Latitude"].cast("double"))
-southernmost_points = df.groupBy("UserID").agg(min("Latitude").alias("SouthernmostLatitude"), min("Date").alias("AchievedDate"))
+df = df.withColumn("Latitude", col("Latitude").cast("double"))
+southernmost_points = df.groupBy("UserID").agg(min(col("Latitude")).alias("SouthernmostLatitude"), min(col("Date")).alias("AchievedDate"))
 result = southernmost_points.orderBy("SouthernmostLatitude", "AchievedDate").limit(5)
+
+# Show the result for Task 4
+result.show()
 
 # Task 5
 file_path = "dataset.txt"
@@ -67,6 +78,9 @@ window_spec = Window.partitionBy("UserID").orderBy("Timestamp")
 df = df.withColumn("AltitudeSpan", F.max("Altitude").over(window_spec))
 result_df = df.groupBy("UserID").agg(F.max("AltitudeSpan").alias("MaxAltitudeSpan"))
 top5_users = result_df.orderBy(F.desc("MaxAltitudeSpan")).limit(5)
+
+# Show the result for Task 5
+top5_users.show()
 
 # Task 6
 file_path = "dataset.txt"
@@ -88,6 +102,7 @@ max_distance_day = df.groupBy("UserID", "Date").agg(F.sum("Distance").alias("Tot
     filter(F.col("TotalDistance") == F.col("max_distance")). \
     select("UserID", "Date", "TotalDistance")
 
+# Show the result for Task 6
 max_distance_day.show()
 
 # Task 7
@@ -106,6 +121,8 @@ result_df_speed = df.withColumn("rank", F.row_number().over(max_speed_window)) \
     .filter("rank = 1") \
     .select("UserID", "speed", "Date", "Time")
 
+# Show the result for Task 7
 result_df_speed.show(truncate=False)
 
+# Stop the Spark session
 spark.stop()
